@@ -6,6 +6,8 @@ from openai import OpenAI, OpenAIError
 from dotenv import load_dotenv
 
 from models import HealthResponseModel, ChatRequest, ChatResponse
+from connectors.openai_connector import OpenAIConnector
+from services.chat_services import ChatService
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,21 +29,20 @@ app.add_middleware(
     allow_headers=["*"],    # Allow all headers
 )
 
-provider = os.getenv("PROVIDER", "openai").lower()
+def build_connector():
+    provider = os.getenv("PROVIDER", "openai")
+    if provider == "openai":
+        key = os.environ["OPENAI_API_KEY"]
+        return OpenAIConnector(key, os.getenv("OPENAI_MODEL","gpt-3.5-turbo"), os.getenv("SYSTEM_PROMPT","You are a helpful assistant."))
+    raise HTTPException(500, f"Provider {provider} not supported")
 
-engine = None
-
-if provider == "openai":
-    from connectors.openai_connector import OpenAIConnector
-    engine = OpenAIConnector()
-else:
-    raise HTTPException(status_code=400, detail="Unsupported provider")
+chat_service = ChatService(build_connector())
 
 # Define chat endpoint
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     try:
-        response = await engine.send_message(request)
+        response = await chat_service.reply(request.message)
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
