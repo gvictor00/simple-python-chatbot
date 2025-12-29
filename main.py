@@ -6,7 +6,6 @@ from openai import OpenAI, OpenAIError
 from dotenv import load_dotenv
 
 from models import HealthResponseModel, ChatRequest, ChatResponse
-from connectors.openai_connector import OpenAIConnector
 from services.chat_services import ChatService
 
 # Load environment variables from .env file
@@ -32,7 +31,11 @@ app.add_middleware(
 def build_connector():
     provider = os.getenv("PROVIDER", "openai")
     if provider == "openai":
+        from connectors.openai_connector import OpenAIConnector
         return OpenAIConnector()
+    elif provider == "anthropic":
+        from connectors.anthropic_connector import AnthropicConnector
+        return AnthropicConnector()
     raise HTTPException(500, f"Provider {provider} not supported")
 
 chat_service = ChatService(build_connector())
