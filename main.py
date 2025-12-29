@@ -32,8 +32,7 @@ app.add_middleware(
 def build_connector():
     provider = os.getenv("PROVIDER", "openai")
     if provider == "openai":
-        key = os.environ["OPENAI_API_KEY"]
-        return OpenAIConnector(key, os.getenv("OPENAI_MODEL","gpt-3.5-turbo"), os.getenv("SYSTEM_PROMPT","You are a helpful assistant."))
+        return OpenAIConnector()
     raise HTTPException(500, f"Provider {provider} not supported")
 
 chat_service = ChatService(build_connector())
