@@ -1,12 +1,9 @@
 from pydantic import BaseModel
 
+# Define health check response model
 class HealthResponseModel(BaseModel):
     status: str
     version: str
-
-    def __init__(self, status: str, version: str):
-        self.status = status
-        self.version = version
 
 # Define request body model
 class ChatRequest(BaseModel):

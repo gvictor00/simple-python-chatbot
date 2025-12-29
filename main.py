@@ -6,18 +6,14 @@ from openai import OpenAI, OpenAIError
 from dotenv import load_dotenv
 
 from models import HealthResponseModel, ChatRequest, ChatResponse
+from connectors.openai_connector import OpenAIConnector
+from services.chat_services import ChatService
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Initialize FastAPI app
 app = FastAPI()
-
-# Retrieve OpenAI API key from environment variables
-openai_api_key = os.getenv("OPENAI_API_KEY")
-
-# Create OpenAI client
-openai_client = OpenAI(api_key=openai_api_key)
 
 # Configure CORS
 origins = [
@@ -33,25 +29,23 @@ app.add_middleware(
     allow_headers=["*"],    # Allow all headers
 )
 
+def build_connector():
+    provider = os.getenv("PROVIDER", "openai")
+    if provider == "openai":
+        return OpenAIConnector()
+    raise HTTPException(500, f"Provider {provider} not supported")
+
+chat_service = ChatService(build_connector())
+
 # Define chat endpoint
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     try:
-        # Call OpenAI API to get a response
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": request.message},
-            ],
-        )
-        reply = response.choices[0].message.content.strip()
-        return ChatResponse(reply=reply)
-    except OpenAIError as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI API error: {e}")
+        response = await chat_service.reply(request.message)
+        return response
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
-    
+        raise HTTPException(status_code=500, detail=f"OpenAI API error: {str(e)}")
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Simple Python Chatbot API!"}
